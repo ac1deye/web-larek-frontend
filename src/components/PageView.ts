@@ -7,6 +7,7 @@ export class PageView extends Component<IPage> {
 	protected _counter: HTMLElement;
 	protected _wrapper: HTMLElement;
 	protected _basket: HTMLElement;
+	protected _catalog: HTMLElement;
 
 	constructor(container: HTMLElement, protected events: IEvents) {
 		super(container);
@@ -14,10 +15,15 @@ export class PageView extends Component<IPage> {
 		this._counter = ensureElement<HTMLElement>('.header__basket-counter');
 		this._wrapper = ensureElement<HTMLElement>('.page__wrapper');
 		this._basket = ensureElement<HTMLElement>('.header__basket');
+		this._catalog = ensureElement<HTMLElement>('.gallery');
 
 		this._basket.addEventListener('click', () => {
 			this.events.emit('basket:open');
 		});
+	}
+
+	set catalog(items: HTMLElement[]) {
+		this._catalog.replaceChildren(...items);
 	}
 
 	set locked(value: boolean) {

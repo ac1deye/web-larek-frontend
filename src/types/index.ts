@@ -85,6 +85,7 @@ export interface IValidatorRule<T> {
 export interface IPage {
 	counter: number;
 	locked: boolean;
+	catalog: HTMLElement[];
 }
 
 export interface IModalRouter {

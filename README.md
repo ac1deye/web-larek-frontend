@@ -106,7 +106,7 @@ interface IBasketModel {
 ```
 
 ### 2. Class `CatalogModel`
-Имплементирует интерфейс `ICatalogModel`. Реализует хранение, чтение товаров для отображения в каталоге `CatalogView`.
+Имплементирует интерфейс `ICatalogModel`. Реализует хранение, чтение товаров для отображения в `PageView`.
 
 При изменении значения `items` триггерится событие `catalog:change` в `EventEmitter`.
 
@@ -188,14 +188,14 @@ const userDataResult = validator
 
 **Роутер модалького окна**: `ModalRouter`;
 
-**Представления:** `PageView`, `CatalogView`, `BasketView`, `PaymentInfoFormView`, `UserDataFormView`.
+**Представления:** `PageView`, `BasketView`, `PaymentInfoFormView`, `UserDataFormView`.
 
 Взаимодействие между модулями реализовано 2 способами:
 1. С помощью паттерна Наблюдатель и класс `EventEmitter`;
 2. С помощью прокидывания функций и index.js до конечного модуля
 
 Обработка событий:
-- `catalog:change` - `catalogView` рендерит карточки из `catalogModel`;
+- `catalog:change` - `pageView` рендерит карточки из `catalogModel`;
 - `item:click` - по `id` находим карточку в `catalogModel`, создаем экземпляр класса `PreviewCardView`, передаем его в `modalRouter`
 - `basket:open` - в `modalRouter` передаем `basketView`
 - `basket:changed` - рендер корзины, рендер каунтера корзины
@@ -227,23 +227,19 @@ const userDataResult = validator
  - `_counter` - указывается количество товаров в корзине;
  - `_wrapper` - блокируется скролл при открытии модального окна;
  - `_basket` - обрабатывается нажатие на корзину.
+ - `_catalog` - отображает массив каточек
 
 Имплементирует интерфейс `IPage`:
 
 ``` ts
 interface IPage {
-	counter: number; // количество товаров в корзине;
-	locked: boolean; // блокирует скролл.
+	counter: number; 				// количество товаров в корзине;
+	locked: boolean; 				// блокирует скролл.
+	catalog: HTMLElement[]; // карточки
 }
 ```
 
-### 3. Class `CatalogView`
-
-Класс, наследуемый от `Component`. Рендерит в себе массив `CatalogCardView`.
-
-В конструктор принимает template карточки.
-
-### 4. Class `BasketView`
+### 3. Class `BasketView`
 
 Класс, наследуемый от `Component`. Хранит ссылки на:
 
@@ -261,17 +257,7 @@ interface IBasketActions {
 
 При нажатии на кнопку `_button` - вызывается метод `purchase`.
 
-``` ts
-interface ICardActions {
-	onClick?: (event: MouseEvent) => void;
-	remove?: (id: string) => void;
-}
-```
-
-При нажатии на корзину в ячейке `BasketCardView`, вызывается метод `remove(id)`, аргументом передается идентификатор карточки.
-
-
-### 5. Модальные окна
+### 4. Модальные окна
 
 > `PaymentInfoFormView` наслеуется от `Form`. Хранит ссылки на:
 

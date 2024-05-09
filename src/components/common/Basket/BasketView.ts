@@ -1,13 +1,9 @@
-import { IProduct } from '../../../types';
-import { cloneTemplate, ensureElement } from '../../../utils/utils';
+import { createElement, ensureElement } from '../../../utils/utils';
 import { Component } from '../../base/Component';
-import { IEvents } from '../../base/events';
-import { ICardActions } from '../Cards/CardView';
-import { BasketCardView } from '../Cards/BasketCardView';
 
 export type IBasket = {
 	total: number;
-	items: IProduct[];
+	items: HTMLElement[];
 };
 
 export interface IBasketActions {
@@ -22,14 +18,19 @@ export class BasketView extends Component<IBasket> {
 	constructor(
 		protected blockName: string,
 		container: HTMLElement,
-		protected events: IEvents,
-		protected cardActions?: ICardActions,
 		protected actions?: IBasketActions
 	) {
 		super(container);
-		this._list = ensureElement<HTMLUListElement>('.modal__title', container);
-		this._total = ensureElement<HTMLElement>('.basket__price', container);
-		this._button = ensureElement<HTMLButtonElement>('.button', container);
+
+		this._list = ensureElement<HTMLUListElement>(
+			`.${blockName}__list`,
+			container
+		);
+		this._total = ensureElement<HTMLElement>(`.${blockName}__price`, container);
+		this._button = ensureElement<HTMLButtonElement>(
+			`.${blockName}__button`,
+			container
+		);
 
 		if (actions) {
 			this._button.addEventListener('click', actions.purchase);
@@ -41,24 +42,15 @@ export class BasketView extends Component<IBasket> {
 		this._button.disabled = value === 0;
 	}
 
-	render(data?: Partial<IBasket>): HTMLElement {
-		super.render(data);
-
-		const cards = data.items.map((item, index) => {
-			const card = new BasketCardView(
-				cloneTemplate(ensureElement<HTMLTemplateElement>('#card-basket')),
-				this.cardActions
+	set items(items: HTMLElement[]) {
+		if (items.length) {
+			this._list.replaceChildren(...items);
+		} else {
+			this._list.replaceChildren(
+				createElement<HTMLParagraphElement>('p', {
+					textContent: 'Корзина пуста',
+				})
 			);
-			return card.render({
-				id: item.id,
-				title: item.title,
-				price: item.price,
-				index: index + 1,
-			});
-		});
-
-		this._list.replaceChildren(...cards);
-
-		return this.container;
+		}
 	}
 }

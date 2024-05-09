@@ -5,16 +5,11 @@ import { EventEmitter } from './components/base/events';
 import { API_URL, CDN_URL } from './utils/constants';
 import { cloneTemplate, ensureElement } from './utils/utils';
 import { BasketView, IBasket } from './components/common/Basket/BasketView';
-import { CatalogView } from './components/common/Catalog/CatalogView';
 import {
 	CatalogChangeEvent,
 	CatalogModel,
 } from './components/common/Catalog/CatalogModel';
-import {
-	IOrderPaymentInfo,
-	IOrderUserData,
-	IFormState,
-} from './types';
+import { IOrderPaymentInfo, IOrderUserData, IFormState } from './types';
 import { ModalRouter } from './components/common/Modal/ModalRouter';
 import { PreviewCardView } from './components/common/Cards/PreviewCardView';
 import {
@@ -33,6 +28,8 @@ import {
 	UserDataValidatiorRule,
 	Validator,
 } from './components/Validator';
+import { BasketCardView } from './components/common/Cards/BasketCardView';
+import { CatalogCardView } from './components/common/Cards/CatalogCardView';
 
 const events = new EventEmitter();
 
@@ -51,15 +48,6 @@ const modalRouter = new ModalRouter(modalTemplate, events);
 const catalogModel = new CatalogModel(events);
 const orderModel = new OrderModel(events);
 const basketModel = new BasketModel(events);
-
-const catalogView = new CatalogView(
-	ensureElement<HTMLElement>('.gallery'),
-	ensureElement<HTMLTemplateElement>('#card-catalog'),
-	events,
-	{
-		onClick: (event) => events.emit('item:click', event),
-	}
-);
 
 // Форма ввода данных заказа
 const paymentInfoFormView = new PaymentInfoFormView(
@@ -80,31 +68,33 @@ const userDataFormView = new UserDataFormView(
 );
 
 // Корзина
-const basketView = new BasketView(
-	'basket',
-	cloneTemplate(basketTemplate),
-	events,
-	{
-		remove: (id) => basketModel.remove(id),
+const basketView = new BasketView('basket', cloneTemplate(basketTemplate), {
+	purchase: () => {
+		const result = validator
+			.setValidator(new OrderValidatorRule())
+			.validate(orderModel);
+		modalRouter.route<IOrderPaymentInfo & IFormState>(paymentInfoFormView, {
+			address: orderModel.address,
+			payment: orderModel.payment,
+			valid: result.valid,
+			errors: result.errors,
+		});
 	},
-	{
-		purchase: () => {
-			const result = validator
-				.setValidator(new OrderValidatorRule())
-				.validate(orderModel);
-			modalRouter.route<IOrderPaymentInfo & IFormState>(paymentInfoFormView, {
-				address: orderModel.address,
-				payment: orderModel.payment,
-				valid: result.valid,
-				errors: result.errors,
-			});
-		},
-	}
-);
+});
 
 // Рендерим товары
 events.on<CatalogChangeEvent>('catalog:change', (event) => {
-	catalogView.render(event.products);
+	const cards = event.products.map((item) => {
+		const card = new CatalogCardView(
+			cloneTemplate(ensureElement<HTMLTemplateElement>('#card-catalog')),
+			{
+				onClick: (event) => events.emit('item:click', event),
+			}
+		);
+		return card.render(item);
+	});
+
+	page.catalog = cards;
 });
 
 // Нажатие на товар в каталоге, открываем превью карточки
@@ -115,7 +105,7 @@ events.on<MouseEvent>('item:click', (event) => {
 		const template = ensureElement<HTMLTemplateElement>('#card-preview');
 		const preview = new PreviewCardView(cloneTemplate(template), {
 			onClick: () => {
-				if (basketModel.items.some((exist) => exist.id == item.id)) {
+				if (basketModel.contains(item.id)) {
 					basketModel.remove(item.id);
 				} else {
 					basketModel.add(item);
@@ -124,24 +114,39 @@ events.on<MouseEvent>('item:click', (event) => {
 			},
 		});
 		const buttonTitle = basketModel.contains(item.id) ? 'Удалить' : 'Купить';
-		modalRouter.route(preview, { ...item, buttonTitle: buttonTitle });
+		const disabled = (item.price ?? 0) == 0;
+
+		modalRouter.route(preview, {
+			...item,
+			buttonTitle: buttonTitle,
+			disabled: disabled,
+		});
 	}
 });
 
 // Открываем корзину
 events.on('basket:open', () => {
 	modalRouter.route<IBasket>(basketView, {
-		items: basketModel.items,
 		total: basketModel.totalPrice,
 	});
 });
 
 // Изменение наполнения корзины
 events.on<BasketChangeEvent>('basket:changed', () => {
-	basketView.render({
-		items: basketModel.items,
-		total: basketModel.totalPrice,
+	basketView.items = basketModel.items.map((item, index) => {
+		const card = new BasketCardView(
+			cloneTemplate(ensureElement<HTMLTemplateElement>('#card-basket')),
+			{ remove: (id) => basketModel.remove(id) }
+		);
+		return card.render({
+			id: item.id,
+			title: item.title,
+			price: item.price,
+			index: index + 1,
+		});
 	});
+
+	basketView.total = basketModel.totalPrice;
 
 	page.render({
 		counter: basketModel.items.length,
@@ -239,6 +244,4 @@ events.on('modal:close', () => {
 api
 	.getProductList()
 	.then(catalogModel.setItems.bind(catalogModel))
-	.catch((err) => {
-		console.error(err);
-	});
+	.catch(console.error);

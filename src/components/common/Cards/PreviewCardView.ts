@@ -4,6 +4,7 @@ import { CatalogCardView, ICatalogCard } from './CatalogCardView';
 
 type IPreviewCard = {
 	buttonTitle: string;
+	disabled: boolean;
 };
 
 export class PreviewCardView extends CatalogCardView implements IPreviewCard {
@@ -30,6 +31,10 @@ export class PreviewCardView extends CatalogCardView implements IPreviewCard {
 
 	set buttonTitle(value: string) {
 		this._button.textContent = value;
+	}
+
+	set disabled(value: boolean) {
+		this._button.disabled = value
 	}
 
 	render(data?: Partial<IPreviewCard & ICatalogCard & ICard>): HTMLElement {
